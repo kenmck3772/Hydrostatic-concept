@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useEffect } from 'react';
 import { translateConcept } from '../services/geminiService';
 import { ConceptTranslation } from '../types';
@@ -6,9 +5,9 @@ import { ConceptTranslation } from '../types';
 const WELL_ENGINEERING_CONCEPTS = [
   { id: 'hydrostatics', label: 'Hydrostatic Pressure', icon: '💧' },
   { id: 'hole_cleaning', label: 'Hole Cleaning', icon: '🧹' },
+  { id: 'directional', label: 'Directional Drilling', icon: '🎯' },
   { id: 'gas_migration', label: 'Gas Migration', icon: '🫧' },
   { id: 'well_control', label: 'Well Control & BOP', icon: '🛑' },
-  { id: 'directional', label: 'Directional Drilling', icon: '🎯' },
   { id: 'mpd', label: 'Managed Pressure Drilling', icon: '🔄' },
   { id: 'hydraulics', label: 'Wellbore Hydraulics', icon: '🌊' },
   { id: 'casing', label: 'Casing & Tubing Design', icon: '🏗️' }
@@ -17,7 +16,7 @@ const WELL_ENGINEERING_CONCEPTS = [
 const SUGGESTED_HOBBIES = [
   "Scuba Diving", "F1 Car Hydraulics", "Aquarium Design", 
   "Residential Plumbing", "Mountain Biking", "Espresso Extraction", 
-  "Pressure Canning", "Photography", "Gardening"
+  "Tesla Autopilot", "Flight Simulators", "Sailing Navigation"
 ];
 
 const FLUID_PRESETS = [
@@ -36,10 +35,9 @@ const HydrostaticVisualizer: React.FC = () => {
   const [viewMode, setViewMode] = useState<'Simulation' | 'Theory' | 'Analogies'>('Simulation');
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Constants for Pressure calculation
   const SG_TO_PPG = 8.33;
-  const G_CONST = 0.052; // PSI per ft per ppg
-  const TVD_ft = depth * 100; // Scaled depth for visualization
+  const G_CONST = 0.052; 
+  const TVD_ft = depth * 100; 
   const ppgValue = density * SG_TO_PPG;
   const hydrostaticP = Math.round(ppgValue * G_CONST * TVD_ft);
 
@@ -65,423 +63,142 @@ const HydrostaticVisualizer: React.FC = () => {
     if (!containerRef.current || hoverY === null) return;
     const rect = containerRef.current.getBoundingClientRect();
     const x = e.clientX - rect.left;
-    setProbes(prev => [...prev.slice(-3), { x, y: hoverY, id: Date.now() }]);
+    setProbes(prev => [...prev.slice(-4), { x, y: hoverY, id: Date.now() }]);
   };
 
   const activePreset = FLUID_PRESETS.find(p => Math.abs(p.sg - density) < 0.05) || FLUID_PRESETS[1];
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-[3.5rem] p-10 mt-6 flex flex-col lg:flex-row items-stretch gap-12 animate-in zoom-in duration-700 shadow-2xl overflow-hidden relative">
-      {/* Background Formula Watermark */}
       <div className="absolute top-0 left-0 p-12 opacity-[0.03] pointer-events-none select-none text-white z-0">
         <span className="text-[16rem] font-black italic uppercase tracking-tighter leading-none">P = ρgh</span>
       </div>
 
-      {/* Visualizer Column */}
       <div className="flex flex-col gap-4 flex-shrink-0 z-10">
         <div 
           ref={containerRef}
           onMouseMove={handleMouseMove}
           onMouseLeave={() => setHoverY(null)}
           onClick={handleAddProbe}
-          className="relative w-80 h-[50rem] bg-slate-950 border-4 border-slate-800 rounded-[3rem] overflow-hidden shadow-inner cursor-crosshair group"
+          className="relative w-96 h-[55rem] bg-slate-950 border-4 border-slate-800 rounded-[3rem] overflow-hidden shadow-inner cursor-crosshair group flex"
         >
           {/* Surface Air */}
-          <div 
-            className="absolute top-0 left-0 right-0 bg-slate-900/50 flex flex-col items-center justify-center border-b border-white/5 transition-all duration-700"
-            style={{ height: `${100 - depth}%` }}
-          >
-            <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest">Surface Atmosphere</span>
+          <div className="absolute top-0 left-0 right-0 bg-slate-900/50 flex flex-col items-center justify-center border-b border-white/5 transition-all duration-700 z-10" style={{ height: `${100 - depth}%` }}>
+            <span className="text-[8px] font-black text-slate-600 uppercase tracking-widest px-8 text-center">Surface Atmosphere (Zero Hydrostatic Head)</span>
           </div>
 
-          {/* Fluid Body */}
-          <div 
-            className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t ${activePreset.color} transition-all duration-700 ease-out`}
-            style={{ height: `${depth}%` }}
-          >
-            {/* Height Rule / Weight Gradient Grid Overlay */}
+          {/* Depth Gauge */}
+          <div className="absolute left-0 top-0 bottom-0 w-12 border-r border-white/5 flex flex-col justify-between py-10 z-20">
+             {Array.from({ length: 6 }).map((_, i) => (
+               <span key={i} className="text-[7px] font-black text-slate-600 font-mono text-center">{(5 - i) * 2000}ft</span>
+             ))}
+          </div>
+
+          {/* Fluid Column Container */}
+          <div className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t ${activePreset.color} transition-all duration-700 ease-out`} style={{ height: `${depth}%` }}>
+            
+            {/* ENHANCED: Literal Gravity Stack Grid */}
             {showGrid && (
-              <div className="absolute inset-0 flex flex-col pointer-events-none opacity-50">
-                {Array.from({ length: 20 }).map((_, i) => (
-                  <div 
-                    key={i} 
-                    className="flex-1 border-b border-white/10 flex items-center justify-end pr-4 relative"
-                  >
-                    <div 
-                      className="h-[1px] bg-blue-400/30 rounded-full transition-all duration-700"
-                      style={{ width: `${(i + 1) * 5}%` }}
-                    ></div>
-                    {i % 5 === 4 && <span className="absolute left-4 text-[6px] font-black text-white/20 uppercase tracking-tighter">Stack Segment</span>}
-                  </div>
-                ))}
+              <div className="absolute inset-0 flex flex-col pointer-events-none z-10">
+                {Array.from({ length: 10 }).map((_, i) => {
+                  const segmentTVD = Math.round((i + 1) * TVD_ft / 10);
+                  const cumulativePressure = Math.round(ppgValue * G_CONST * segmentTVD);
+                  const layerContribution = Math.round(ppgValue * G_CONST * (TVD_ft / 10));
+                  const stressIntensity = (i + 1) / 10;
+
+                  return (
+                    <div key={i} className="flex-1 border-b border-white/5 relative group/segment flex flex-col items-center justify-center">
+                      {/* Literal Weight Stacking Visualization */}
+                      <div 
+                        className="absolute inset-x-4 bottom-2 rounded-xl bg-blue-500/10 border border-blue-400/20 backdrop-blur-[2px] transition-all duration-500 flex items-center justify-between px-6" 
+                        style={{ top: '4px', opacity: 0.3 + (i * 0.07) }}
+                      >
+                         <div className="flex flex-col">
+                            <span className="text-[7px] font-black text-blue-400 uppercase tracking-widest">Weight Layer {i+1}</span>
+                            <span className="text-[10px] font-mono text-white/60 font-black">+{layerContribution} PSI</span>
+                         </div>
+                         <div className="flex flex-col items-end">
+                            <span className="text-[6px] font-black text-slate-500 uppercase">Load from Above</span>
+                            <span className="text-[12px] font-mono text-blue-400 font-black">Σ {cumulativePressure} PSI</span>
+                         </div>
+                      </div>
+
+                      {/* Wall Burst Stress Indicators */}
+                      <div className="absolute inset-y-0 left-0 w-1.5 bg-red-500 transition-all duration-700 shadow-[2px_0_15px_rgba(239,68,68,0.5)]" style={{ opacity: stressIntensity * 0.8 }}></div>
+                      <div className="absolute inset-y-0 right-0 w-1.5 bg-red-500 transition-all duration-700 shadow-[-2px_0_15px_rgba(239,68,68,0.5)]" style={{ opacity: stressIntensity * 0.8 }}></div>
+                      
+                      {/* Pressure Vector Arrows (Pascal's Law Visualization) */}
+                      <div className="absolute inset-0 flex items-center justify-center opacity-30">
+                         {/* Downward Force */}
+                         <div className="absolute flex flex-col items-center" style={{ bottom: '10%', height: `${20 + i * 5}%` }}>
+                            <div className="w-0.5 bg-white flex-1"></div>
+                            <div className="w-2 h-2 border-b border-r border-white rotate-45 -mt-2"></div>
+                         </div>
+                         {/* Omnidirectional Lateral Force (Pascal's Law) */}
+                         <div className="absolute flex items-center justify-between w-full px-1">
+                            <div className="flex items-center">
+                               <div className="w-2 h-2 border-l border-t border-white rotate-[-45deg] -mr-1"></div>
+                               <div className="h-0.5 bg-white" style={{ width: `${10 + i * 5}px` }}></div>
+                            </div>
+                            <div className="flex items-center">
+                               <div className="h-0.5 bg-white" style={{ width: `${10 + i * 5}px` }}></div>
+                               <div className="w-2 h-2 border-r border-t border-white rotate-45 -ml-1"></div>
+                            </div>
+                         </div>
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             )}
 
-            {/* Deployed Probes */}
+            {/* Pressure Wedge Profile */}
+            <div className="absolute left-0 top-0 bottom-0 w-24 bg-slate-950/30 border-r border-white/5 overflow-hidden z-10">
+               <svg className="w-full h-full" preserveAspectRatio="none" viewBox="0 0 100 100">
+                 <path 
+                    d={`M 0,0 L 100,100 L 0,100 Z`} 
+                    className="fill-blue-500/20 stroke-blue-400/40 stroke-[1] transition-all duration-700"
+                 />
+                 <text x="50" y="30" textAnchor="middle" className="fill-blue-400 font-black text-[6px] uppercase tracking-tighter opacity-40">Cumulative Column Mass</text>
+               </svg>
+            </div>
+
+            {/* Interactive Probes */}
             {probes.map(p => {
               const pressure = calculatePressureAtY(p.y);
               const fluidTopY = (containerRef.current?.getBoundingClientRect().height || 0) * (1 - depth/100);
-              const relativeY = p.y - fluidTopY;
-
               return (
-                <div key={p.id} className="absolute" style={{ left: p.x, top: relativeY }}>
-                  {/* Omnidirectional Vectors */}
-                  <div className="absolute inset-0 flex items-center justify-center">
+                <div key={p.id} className="absolute z-30" style={{ left: p.x, top: p.y - fluidTopY }}>
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     {[0, 45, 90, 135, 180, 225, 270, 315].map(angle => (
-                      <div 
-                        key={angle}
-                        className="absolute h-0.5 bg-amber-500/60 origin-left transition-all duration-500"
-                        style={{ 
-                          transform: `rotate(${angle}deg)`,
-                          width: `${15 + pressure * 0.02}px`, 
-                        }}
-                      >
-                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 border-r border-t border-amber-500 rotate-45"></div>
+                      <div key={angle} className="absolute h-0.5 bg-amber-500/80 origin-left transition-all duration-500 animate-pulse" style={{ transform: `rotate(${angle}deg)`, width: `${12 + pressure * 0.03}px`, animationDelay: `${angle * 2}ms` }}>
+                        <div className="absolute right-0 top-1/2 -translate-y-1/2 w-1.5 h-1.5 border-r border-t border-amber-400 rotate-45"></div>
                       </div>
                     ))}
                   </div>
-                  <div className="w-3 h-3 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full shadow-xl border-2 border-amber-500 animate-pulse absolute"></div>
-                  <div className="bg-slate-950 border border-amber-500/50 px-3 py-1.5 rounded-lg backdrop-blur-md -translate-y-12 -translate-x-1/2 shadow-2xl">
-                     <span className="text-[12px] font-black text-white font-mono">{pressure} <span className="text-[8px] opacity-40">PSI</span></span>
+                  <div className="w-4 h-4 -translate-x-1/2 -translate-y-1/2 bg-white rounded-full shadow-[0_0_20px_rgba(255,255,255,0.5)] border-2 border-amber-500 absolute scale-125"></div>
+                  <div className="bg-slate-950 border-2 border-amber-500/50 px-3 py-1.5 rounded-xl backdrop-blur-xl -translate-y-16 -translate-x-1/2 shadow-2xl min-w-[80px] text-center">
+                     <span className="text-[12px] font-black text-white font-mono block leading-none">{pressure}</span>
+                     <span className="text-[8px] text-amber-500 font-black uppercase tracking-widest">PSI @ DEPTH</span>
                   </div>
                 </div>
               );
             })}
           </div>
-
-          {/* Hover Tracker */}
-          {hoverY !== null && probes.length < 3 && (
-            <div className="absolute w-full border-t border-amber-500/30 pointer-events-none z-30" style={{ top: hoverY }}>
-               <div className="bg-slate-950/80 px-2 py-0.5 rounded ml-2 mt-2 inline-block border border-amber-500/20">
-                 <span className="text-[9px] font-mono text-amber-500 font-bold">{calculatePressureAtY(hoverY)} PSI</span>
-               </div>
-            </div>
-          )}
         </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <button onClick={() => setShowGrid(!showGrid)} className={`p-3 rounded-2xl text-[8px] font-black uppercase tracking-widest transition-all ${showGrid ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-500'}`}>
-            {showGrid ? 'Hide Weight Grid' : 'Show Weight Grid'}
+        <div className="grid grid-cols-2 gap-3">
+          <button onClick={() => setShowGrid(!showGrid)} className={`p-4 rounded-2xl text-[9px] font-black uppercase tracking-widest transition-all ${showGrid ? 'bg-blue-500 text-white' : 'bg-slate-800 text-slate-500'}`}>
+            {showGrid ? 'Hide Weight Stack' : 'Show Weight Stack'}
           </button>
-          <button onClick={() => setProbes([])} className="p-3 bg-slate-800 rounded-2xl text-[8px] font-black text-slate-500 uppercase tracking-widest hover:text-red-500 transition-all">
-            Reset Probes
-          </button>
+          <button onClick={() => setProbes([])} className="p-4 bg-slate-800 rounded-2xl text-[9px] font-black text-slate-500 uppercase tracking-widest hover:text-red-500 transition-all">Clear Data Probes</button>
         </div>
       </div>
 
-      {/* Control Panel & Content */}
-      <div className="flex-1 space-y-8 z-10">
-        <div className="flex bg-slate-950 p-2 rounded-2xl border border-slate-800 gap-2">
+      <div className="flex-1 space-y-8 z-10 flex flex-col">
+        <div className="flex bg-slate-950 p-2 rounded-3xl border border-slate-800 gap-2">
            {['Simulation', 'Theory', 'Analogies'].map((mode) => (
              <button key={mode} onClick={() => setViewMode(mode as any)}
-               className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode ? 'bg-amber-500 text-slate-950' : 'text-slate-500 hover:text-slate-300'}`}>
-               {mode}
-             </button>
-           ))}
-        </div>
-
-        {viewMode === 'Simulation' && (
-          <div className="space-y-6 animate-in fade-in duration-500">
-             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="bg-slate-950 p-8 rounded-[2.5rem] border border-slate-800 space-y-6">
-                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block italic">1. Fluid Density (ρ)</label>
-                   <div className="grid grid-cols-2 gap-2">
-                      {FLUID_PRESETS.map((p) => (
-                        <button key={p.label} onClick={() => setDensity(p.sg)}
-                          className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase border transition-all ${density === p.sg ? 'bg-blue-500 border-blue-400 text-white' : 'bg-slate-900 border-slate-800 text-slate-500'}`}>
-                          {p.label}
-                        </button>
-                      ))}
-                   </div>
-                   <input type="range" min="0.5" max="2.0" step="0.05" value={density} onChange={(e) => setDensity(parseFloat(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer" />
-                   <div className="flex justify-between text-xs font-mono">
-                      <span className="text-slate-500">Specific Gravity:</span>
-                      <span className="text-blue-400 font-bold">{density.toFixed(2)} SG</span>
-                   </div>
-                </div>
-
-                <div className="bg-slate-950 p-8 rounded-[2.5rem] border border-slate-800 space-y-6">
-                   <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block italic">2. Vertical Height (h)</label>
-                   <div className="bg-slate-900 p-6 rounded-2xl border border-slate-800 flex justify-between items-center">
-                      <span className="text-3xl font-black text-white italic font-mono">{TVD_ft}</span>
-                      <span className="text-[10px] font-black text-slate-600 uppercase">Feet (TVD)</span>
-                   </div>
-                   <input type="range" min="10" max="100" value={depth} onChange={(e) => setDepth(parseInt(e.target.value))} className="w-full accent-amber-500 h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer" />
-                </div>
-             </div>
-
-             <div className="bg-slate-950 p-10 rounded-[3rem] border border-slate-800 shadow-2xl relative overflow-hidden group">
-                <div className="absolute top-0 left-0 w-2 h-full bg-amber-500 group-hover:shadow-[0_0_20px_rgba(245,158,11,0.5)] transition-all"></div>
-                <div className="flex flex-col md:flex-row justify-between items-center gap-8">
-                   <div className="space-y-2">
-                      <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em]">Total Hydrostatic Head</span>
-                      <h4 className="text-7xl font-black text-white italic tracking-tighter leading-none">{hydrostaticP} <span className="text-sm opacity-30 font-mono uppercase tracking-tighter">PSI</span></h4>
-                   </div>
-                   <div className="bg-blue-500/5 p-6 rounded-3xl border border-blue-500/10 max-w-xs text-center">
-                      <p className="text-[9px] text-blue-400 font-black uppercase tracking-widest leading-relaxed">
-                        The "Weight Rule": At depth, the fluid column pushes <span className="text-white">EQUALLY</span> in all directions.
-                      </p>
-                   </div>
-                </div>
-             </div>
-          </div>
-        )}
-
-        {viewMode === 'Theory' && (
-          <div className="space-y-10 animate-in slide-in-from-right-10 duration-500">
-             <div className="bg-slate-950 p-20 rounded-[4rem] border border-slate-800 text-center relative overflow-hidden shadow-inner group">
-                <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent"></div>
-                <h5 className="text-[12px] font-black text-blue-500 uppercase tracking-[0.5em] mb-12">The Governing Law</h5>
-                <h4 className="text-[10rem] font-black text-white italic tracking-tighter leading-none drop-shadow-2xl select-none">P = ρgh</h4>
-                <div className="mt-12 flex justify-center gap-16 text-slate-500">
-                   <div className="flex flex-col items-center">
-                      <span className="text-2xl font-black text-white italic">ρ (Rho)</span>
-                      <span className="text-[8px] font-black uppercase tracking-widest mt-1">Density (ppg/sg)</span>
-                   </div>
-                   <div className="flex flex-col items-center">
-                      <span className="text-2xl font-black text-white italic">h (Height)</span>
-                      <span className="text-[8px] font-black uppercase tracking-widest mt-1">Vertical Depth (TVD)</span>
-                   </div>
-                </div>
-             </div>
-             <div className="bg-slate-900 border border-slate-800 p-12 rounded-[3.5rem] relative shadow-xl">
-                <h4 className="text-[11px] font-black text-amber-500 uppercase tracking-[0.5em] mb-8 italic">Key Concept: Isostasy</h4>
-                <p className="text-slate-300 text-lg leading-relaxed font-medium mb-6 italic">
-                  Unlike a solid object which only pushes down, a fluid under pressure pushes <span className="text-white font-bold underline decoration-amber-500 underline-offset-4">outwards and upwards</span> with the exact same magnitude as it pushes downwards. 
-                </p>
-                <div className="bg-slate-950 p-6 rounded-2xl border border-slate-800 flex items-center gap-6">
-                   <div className="text-3xl">🧭</div>
-                   <p className="text-xs text-slate-500 font-bold uppercase leading-relaxed">
-                     This is why a balloon underwater shrinks from all sides, not just the top. In a wellbore, this radial pressure is what keeps the formation from collapsing into the hole.
-                   </p>
-                </div>
-             </div>
-          </div>
-        )}
-
-        {viewMode === 'Analogies' && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-bottom-10 duration-500">
-             {[
-               { 
-                 title: 'Scuba Diving', 
-                 icon: '🤿', 
-                 color: 'text-blue-400', 
-                 desc: 'At the surface, you feel 1 atmosphere. Dive to 10m (33ft), and the weight of the water above you adds exactly 1 more atmosphere. Your lungs must equalize this omnidirectional squeeze to function.',
-                 math: 'P_abs = P_atm + P_fluid'
-               },
-               { 
-                 title: 'F1 Hydraulics', 
-                 icon: '🏎️', 
-                 color: 'text-red-500', 
-                 desc: 'Brake fluid acts as a column of pressure. The fluid doesn\'t just push the piston; it creates a "head" of potential energy throughout the line. Mud in a wellbore is a pre-loaded hydraulic circuit.',
-                 math: 'Force = Pressure × Area'
-               },
-               { 
-                 title: 'Aquarium Design', 
-                 icon: '🐠', 
-                 color: 'text-emerald-400', 
-                 desc: 'Engineers design aquarium glass based purely on height. A tank 2ft wide and 10ft tall needs much thicker glass at the bottom than a tank 10ft wide and 2ft tall. Height defines the stress.',
-                 math: 'Stress ∝ Water Height'
-               }
-             ].map((a) => (
-               <div key={a.title} className="bg-slate-950 p-8 rounded-[2.5rem] border border-slate-800 shadow-inner group hover:border-amber-500 transition-all flex flex-col text-center items-center">
-                  <div className="text-6xl mb-8 transform group-hover:scale-110 transition-transform">{a.icon}</div>
-                  <span className={`text-[11px] font-black uppercase tracking-widest ${a.color} mb-4`}>{a.title}</span>
-                  <p className="text-[12px] text-slate-500 leading-relaxed italic font-medium group-hover:text-slate-300 mb-8 flex-1">
-                    {a.desc}
-                  </p>
-                  <div className="mt-auto bg-slate-900 px-4 py-2 rounded-xl border border-white/5">
-                    <code className="text-[10px] font-mono text-amber-500 font-bold">{a.math}</code>
-                  </div>
-               </div>
-             ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-};
-
-// ... keep existing visualizers (HoleCleaningVisualizer, GasMigrationVisualizer, etc.) ...
-
-const HoleCleaningVisualizer: React.FC = () => {
-  const [flowRate, setFlowRate] = useState(450);
-  const [viscosity, setViscosity] = useState(35);
-  const [inclination, setInclination] = useState(0);
-  const [particleSize, setParticleSize] = useState(5);
-  const [viewMode, setViewMode] = useState<'Simulation' | 'Rheology' | 'BoycottEffect' | 'Analogies'>('Simulation');
-
-  const annularArea = 35;
-  const annularVelocity = (flowRate * 24.5) / annularArea;
-  const slipVelocity = (particleSize * 15) / (viscosity / 5); 
-  const netVelocity = annularVelocity - (slipVelocity * Math.cos((inclination * Math.PI) / 180));
-  const transportRatio = Math.max(0, Math.min(1, netVelocity / annularVelocity));
-
-  return (
-    <div className="bg-slate-900 border border-slate-800 rounded-[3.5rem] p-10 mt-6 flex flex-col lg:flex-row items-stretch gap-12 animate-in zoom-in duration-700 shadow-2xl overflow-hidden relative">
-      <div className="absolute top-0 left-0 p-12 opacity-[0.03] pointer-events-none select-none text-white">
-        <span className="text-[14rem] font-black italic uppercase tracking-tighter leading-none">V_net = V_a - V_s</span>
-      </div>
-
-      <div className="relative w-80 h-[48rem] bg-slate-950 border-4 border-slate-800 rounded-[3.5rem] overflow-hidden shadow-inner group flex-shrink-0">
-        <div className="absolute inset-0 transition-transform duration-1000 origin-top" style={{ transform: `rotate(${inclination}deg)` }}>
-          <div className="absolute inset-0 bg-blue-500/5 overflow-hidden">
-             {Array.from({ length: 8 }).map((_, i) => (
-               <div key={i} className="absolute w-full h-1 bg-blue-400/10 blur-sm animate-[pulse_2s_infinite]" style={{ top: `${i * 15}%`, animationDelay: `${i * 0.2}s` }} />
-             ))}
-          </div>
-
-          <div className="absolute inset-0">
-             {Array.from({ length: 25 }).map((_, i) => {
-               const delay = Math.random() * 5;
-               const speed = 10 / (netVelocity / 50 || 1);
-               const isStuck = transportRatio < 0.2;
-               return (
-                 <div key={i} className={`absolute bg-amber-600 rounded-full shadow-[0_0_8px_rgba(217,119,6,0.5)] transition-all ${isStuck ? 'opacity-40 grayscale blur-[1px]' : 'opacity-100'}`}
-                   style={{
-                     width: `${particleSize * 1.5 + 2}px`,
-                     height: `${particleSize * 1.5 + 2}px`,
-                     left: `${Math.random() * 80 + 10}%`,
-                     bottom: `-10%`,
-                     animation: isStuck ? 'none' : `moveUp ${speed}s linear infinite`,
-                     animationDelay: `${delay}s`,
-                   }}
-                 />
-               );
-             })}
-          </div>
-        </div>
-
-        <div className="absolute inset-x-0 bottom-0 p-8 bg-gradient-to-t from-slate-950 to-transparent z-20 text-center">
-             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-2">Transport Efficiency</span>
-             <span className="text-4xl font-black text-white italic font-mono">{Math.round(transportRatio * 100)}%</span>
-        </div>
-      </div>
-
-      <div className="flex-1 space-y-8">
-        <div className="flex bg-slate-950 p-2 rounded-2xl border border-slate-800 gap-2 shadow-inner overflow-x-auto">
-           {['Simulation', 'Rheology', 'BoycottEffect', 'Analogies'].map((mode) => (
-             <button key={mode} onClick={() => setViewMode(mode as any)}
-               className={`flex-1 min-w-[120px] py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode ? 'bg-amber-500 text-slate-950 shadow-lg scale-105' : 'text-slate-500 hover:text-slate-300'}`}>
-               {mode}
-             </button>
-           ))}
-        </div>
-
-        <div className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="bg-slate-950 p-8 rounded-3xl border border-slate-800">
-               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 italic">Flow Rate (GPM)</label>
-               <input type="range" min="0" max="1000" value={flowRate} onChange={(e) => setFlowRate(Number(e.target.value))} className="w-full accent-blue-500 h-2 bg-slate-800 rounded-full appearance-none cursor-pointer" />
-               <div className="text-right mt-2 text-white font-mono font-bold">{flowRate}</div>
-            </div>
-            <div className="bg-slate-950 p-8 rounded-3xl border border-slate-800">
-               <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 italic">Viscosity (cP)</label>
-               <input type="range" min="1" max="100" value={viscosity} onChange={(e) => setViscosity(Number(e.target.value))} className="w-full accent-amber-500 h-2 bg-slate-800 rounded-full appearance-none cursor-pointer" />
-               <div className="text-right mt-2 text-white font-mono font-bold">{viscosity}</div>
-            </div>
-          </div>
-        </div>
-      </div>
-      <style>{`
-        @keyframes moveUp {
-          0% { transform: translateY(0); opacity: 0; }
-          10% { opacity: 1; }
-          90% { opacity: 1; }
-          100% { transform: translateY(-700px); opacity: 0; }
-        }
-      `}</style>
-    </div>
-  );
-};
-
-const GasMigrationVisualizer: React.FC = () => {
-  const [bubbleDepth, setBubbleDepth] = useState(100); 
-  const [initialVolume, setInitialVolume] = useState(1); 
-  const [mudWeight, setMudWeight] = useState(10); 
-  const [isMigrating, setIsMigrating] = useState(false);
-  const [viewMode, setViewMode] = useState<'Simulation' | 'Theory' | 'Analogies'>('Simulation');
-
-  const SURFACE_P = 14.7;
-  const TOTAL_DEPTH = 10000; 
-  
-  const currentTVD = (bubbleDepth / 100) * TOTAL_DEPTH;
-  const initialP = (0.052 * mudWeight * TOTAL_DEPTH) + SURFACE_P;
-  const currentP = (0.052 * mudWeight * currentTVD) + SURFACE_P;
-  
-  const currentVolume = (initialP * initialVolume) / currentP;
-  const expansionRatio = currentVolume / initialVolume;
-
-  // Fix: Missing useEffect from React
-  useEffect(() => {
-    let interval: number;
-    if (isMigrating && bubbleDepth > 0) {
-      interval = window.setInterval(() => {
-        setBubbleDepth(prev => Math.max(0, prev - 0.2));
-      }, 50);
-    } else {
-      setIsMigrating(false);
-    }
-    return () => clearInterval(interval);
-  }, [isMigrating, bubbleDepth]);
-
-  return (
-    <div className="bg-slate-900 border border-slate-800 rounded-[3.5rem] p-10 mt-6 flex flex-col lg:flex-row items-stretch gap-12 animate-in zoom-in duration-700 shadow-2xl overflow-hidden relative">
-      <div className="absolute top-0 left-0 p-12 opacity-[0.03] pointer-events-none select-none text-white">
-        <span className="text-[14rem] font-black italic uppercase tracking-tighter leading-none">P₁V₁ = P₂V₂</span>
-      </div>
-
-      <div className="flex flex-col gap-4 flex-shrink-0">
-        <div className="relative w-80 h-[48rem] bg-slate-950 border-4 border-slate-800 rounded-[3.5rem] overflow-hidden shadow-inner flex flex-col">
-          <div className="absolute inset-0 bg-slate-900/40"></div>
-          
-          <div 
-            className="absolute left-1/2 -translate-x-1/2 transition-all duration-300 ease-linear z-30"
-            style={{ 
-              top: `${bubbleDepth}%`,
-              width: `${Math.min(120, 20 * Math.sqrt(currentVolume))}px`,
-              height: `${Math.min(120, 20 * Math.sqrt(currentVolume))}px`,
-              transform: `translate(-50%, -50%)`,
-            }}
-          >
-            <div className="w-full h-full bg-white/20 border-2 border-white/50 rounded-full backdrop-blur-md shadow-[0_0_20px_rgba(255,255,255,0.3)] flex items-center justify-center overflow-hidden">
-               <div className="absolute inset-0 bg-gradient-to-tr from-blue-400/20 to-transparent animate-pulse"></div>
-               <span className="text-[10px] font-black text-white italic drop-shadow-md">G-GAS</span>
-            </div>
-            <div className="absolute inset-0 border border-white/20 rounded-full animate-ping"></div>
-          </div>
-
-          <div className="absolute left-0 top-0 bottom-0 w-12 border-r border-white/5 flex flex-col justify-between p-2 z-20">
-             {[0, 2500, 5000, 7500, 10000].map(d => (
-               <span key={d} className="text-[7px] font-black text-slate-600 font-mono">{d}ft</span>
-             ))}
-          </div>
-
-          <div className="absolute inset-y-0 left-12 right-12 border-x border-slate-700 bg-slate-800/10"></div>
-          
-          <div className="absolute top-0 left-0 right-0 h-16 bg-slate-900/80 border-b border-slate-800 flex items-center justify-center z-40 backdrop-blur-sm">
-             <div className="flex flex-col items-center">
-                <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Surface Pit Gain</span>
-                <span className={`text-xl font-black italic ${expansionRatio > 5 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-                  +{Math.round(currentVolume * 10) / 10} <span className="text-[10px]">bbl</span>
-                </span>
-             </div>
-          </div>
-        </div>
-        
-        <button 
-          onClick={() => { setBubbleDepth(100); setIsMigrating(true); }}
-          className="w-full bg-amber-500 text-slate-950 p-4 rounded-2xl text-[10px] font-black uppercase tracking-widest hover:bg-amber-400 transition-all shadow-xl active:scale-95"
-        >
-          Inject Gas & Start Migration
-        </button>
-      </div>
-
-      <div className="flex-1 space-y-8 flex flex-col overflow-hidden">
-        <div className="flex bg-slate-950 p-2 rounded-2xl border border-slate-800 gap-2 shadow-inner">
-           {['Simulation', 'Theory', 'Analogies'].map((mode) => (
-             <button key={mode} onClick={() => setViewMode(mode as any)}
-               className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode ? 'bg-amber-500 text-slate-950 shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+               className={`flex-1 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode ? 'bg-amber-500 text-slate-950 shadow-xl scale-105' : 'text-slate-500 hover:text-slate-300'}`}>
                {mode}
              </button>
            ))}
@@ -491,55 +208,23 @@ const GasMigrationVisualizer: React.FC = () => {
           {viewMode === 'Simulation' && (
             <div className="space-y-8 animate-in fade-in duration-500">
                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="bg-slate-950 p-8 rounded-[2.5rem] border border-slate-800 space-y-6 shadow-inner">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block italic">1. Initial Conditions</label>
-                    <div className="space-y-4">
-                       <div className="flex justify-between items-center">
-                          <span className="text-[9px] font-black text-white uppercase">Influx Size</span>
-                          <span className="text-xs font-mono font-bold text-blue-400">{initialVolume} bbl</span>
-                       </div>
-                       <input type="range" min="0.1" max="5" step="0.1" value={initialVolume} onChange={(e) => { setInitialVolume(Number(e.target.value)); setBubbleDepth(100); }} className="w-full accent-blue-500 h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer" />
-                       
-                       <div className="flex justify-between items-center pt-2">
-                          <span className="text-[9px] font-black text-white uppercase">Mud Density (MW)</span>
-                          <span className="text-xs font-mono font-bold text-emerald-400">{mudWeight} ppg</span>
-                       </div>
-                       <input type="range" min="8" max="18" step="0.1" value={mudWeight} onChange={(e) => setMudWeight(Number(e.target.value))} className="w-full accent-emerald-500 h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer" />
-                    </div>
+                  <div className="bg-slate-950 p-10 rounded-[3rem] border border-slate-800 space-y-8 shadow-inner">
+                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">1. Fluid Density (ρ)</label>
+                     <input type="range" min="0.5" max="2.0" step="0.05" value={density} onChange={(e) => setDensity(parseFloat(e.target.value))} className="w-full accent-blue-500 h-2 bg-slate-800 rounded-full appearance-none cursor-pointer" />
+                     <div className="flex justify-between text-xs font-mono font-bold"><span className="text-slate-500">Density:</span><span className="text-blue-400">{density.toFixed(2)} SG</span></div>
                   </div>
-
-                  <div className="bg-slate-950 p-8 rounded-[2.5rem] border border-slate-800 flex flex-col justify-center text-center shadow-inner relative overflow-hidden group">
-                     <div className="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent"></div>
-                     <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-4">Expansion Multiplier</span>
-                     <div className="text-6xl font-black text-white italic tracking-tighter transition-all group-hover:scale-110">
-                        {expansionRatio.toFixed(1)}<span className="text-sm opacity-30 ml-2">x</span>
-                     </div>
-                     <p className="text-[8px] font-bold text-amber-500 uppercase tracking-widest mt-4 italic">Critical Risk Zone: &gt;10x Expansion</p>
+                  <div className="bg-slate-950 p-10 rounded-[3rem] border border-slate-800 space-y-8 shadow-inner">
+                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">2. Vertical Height (h)</label>
+                     <input type="range" min="10" max="100" value={depth} onChange={(e) => setDepth(parseInt(e.target.value))} className="w-full accent-amber-500 h-2 bg-slate-800 rounded-full appearance-none cursor-pointer" />
+                     <div className="flex justify-between text-xs font-mono font-bold"><span className="text-slate-500">TVD:</span><span className="text-white">{TVD_ft} ft</span></div>
                   </div>
                </div>
-
-               <div className="bg-slate-950 p-10 rounded-[3.5rem] border border-slate-800 shadow-2xl relative overflow-hidden">
-                  <div className="absolute top-0 left-0 w-2 h-full bg-blue-500"></div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
-                     <div>
-                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest block mb-4">Physics Monitor: Boyle's Law</span>
-                        <div className="space-y-4">
-                           <div className="flex justify-between text-xs font-mono border-b border-slate-800 pb-2">
-                              <span className="text-slate-500 uppercase">Current Pressure:</span>
-                              <span className="text-white">{Math.round(currentP)} psi</span>
-                           </div>
-                           <div className="flex justify-between text-xs font-mono border-b border-slate-800 pb-2">
-                              <span className="text-slate-500 uppercase">Hydrostatic Head:</span>
-                              <span className="text-white">{Math.round(0.052 * mudWeight * currentTVD)} psi</span>
-                           </div>
-                        </div>
-                     </div>
-                     <div className="text-right">
-                        <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em] block mb-2">Well Status</span>
-                        <h4 className={`text-4xl font-black uppercase italic tracking-tighter ${bubbleDepth < 10 ? 'text-red-500 animate-pulse' : 'text-white'}`}>
-                           {bubbleDepth < 10 ? 'RAPID UNLOADING' : bubbleDepth < 50 ? 'EXPANDING' : 'MIGRATING'}
-                        </h4>
-                     </div>
+               <div className="bg-slate-950 p-12 rounded-[4rem] border border-slate-800 shadow-2xl relative overflow-hidden group text-center">
+                  <div className="absolute top-0 left-0 w-3 h-full bg-amber-500"></div>
+                  <span className="text-[11px] font-black text-slate-500 uppercase tracking-[0.5em] mb-2 block">Total Stacked Weight (Bottom)</span>
+                  <h4 className="text-[10rem] font-black text-white italic tracking-tighter leading-none">{hydrostaticP}</h4>
+                  <div className="mt-4 flex justify-center gap-4 text-slate-400">
+                     <span className="bg-red-500/10 text-red-400 px-4 py-1 rounded-lg text-[10px] font-black uppercase italic">High Pressure Zone (Burst Stress)</span>
                   </div>
                </div>
             </div>
@@ -548,62 +233,64 @@ const GasMigrationVisualizer: React.FC = () => {
           {viewMode === 'Theory' && (
             <div className="space-y-10 animate-in slide-in-from-right-10 duration-500">
                <div className="bg-slate-950 p-20 rounded-[4rem] border border-slate-800 text-center relative overflow-hidden shadow-inner group">
-                 <div className="absolute inset-0 bg-gradient-to-b from-blue-500/5 to-transparent"></div>
-                 <h5 className="text-[11px] font-black text-blue-500 uppercase tracking-[0.5em] mb-12">The Governing Equation</h5>
-                 <h4 className="text-[8rem] font-black text-white italic tracking-tighter leading-none select-none drop-shadow-2xl">P₁V₁ = P₂V₂</h4>
-                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-12">Pressure × Volume = Constant (Boyle's Law)</p>
+                  <h5 className="text-[12px] font-black text-blue-500 uppercase tracking-[0.6em] mb-16 italic">The Governing Physical Law</h5>
+                  <h4 className="text-[12rem] font-black text-white italic tracking-tighter leading-none drop-shadow-[0_0_50px_rgba(255,255,255,0.1)] mb-8">P = ρgh</h4>
+                  <p className="text-slate-400 text-sm font-bold uppercase tracking-widest">Pressure = Density × Gravity × Height</p>
                </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="bg-slate-950 p-12 rounded-[3.5rem] border border-slate-800 relative overflow-hidden shadow-xl group">
-                    <h4 className="text-[11px] font-black text-amber-500 uppercase tracking-[0.4em] mb-8">Migration Speed</h4>
-                    <p className="text-slate-300 text-sm leading-relaxed font-medium italic">
-                      Gas is less dense than mud. In a static well, a gas kick will migrate upwards at approximately <span className="text-white font-bold">1,000 ft per hour</span>. As it rises, the surrounding pressure (ρgh) decreases, forcing the gas to occupy more volume.
+               <div className="bg-slate-900 border border-slate-800 p-12 rounded-[3.5rem] shadow-xl space-y-8">
+                  <div className="border-l-4 border-amber-500 pl-8">
+                    <h4 className="text-[12px] font-black text-amber-500 uppercase tracking-[0.5em] mb-4 italic">Pascal's Law: Omnidirectionality</h4>
+                    <p className="text-slate-200 text-lg leading-relaxed font-medium italic">
+                      The defining characteristic of hydrostatic pressure is that it <span className="text-white font-bold underline decoration-amber-500 underline-offset-8 decoration-4">acts equally in all directions</span> at a given depth. 
                     </p>
                   </div>
-                  <div className="bg-slate-900 border border-slate-800 p-12 rounded-[3.5rem] relative overflow-hidden shadow-xl group">
-                    <h4 className="text-[11px] font-black text-blue-500 uppercase tracking-[0.5em] mb-8">Uncontrolled Expansion</h4>
-                    <p className="text-slate-300 text-sm leading-relaxed font-medium italic">
-                      The closer to the surface, the faster the expansion. A 1 bbl kick at 10,000 ft becomes <span className="text-white font-bold">dozens of barrels</span> just below the surface, potentially displacing the entire mud column and leading to a blowout.
-                    </p>
-                  </div>
+                  <p className="text-slate-400 text-base leading-relaxed">
+                    While the *source* of the pressure is the vertical weight of the fluid column above (gravity), the resulting pressure is not just a downward force. It pushes against the casing walls, the drill pipe, and the bottom of the hole with equal intensity. In well engineering, we must account for this "Burst Stress" on our tubulars.
+                  </p>
                </div>
             </div>
           )}
 
           {viewMode === 'Analogies' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-bottom-10 duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 animate-in slide-in-from-bottom-10 duration-700">
                {[
                  { 
-                   title: 'The Soda Bottle', 
-                   icon: '🥤', 
-                   color: 'text-amber-400', 
-                   desc: 'A sealed bottle of soda has high internal pressure, keeping CO2 dissolved. When you open it (reducing pressure), the gas instantly expands, creating fizz and potentially overflowing. Gas migration is like the wellbore "popping the cap" as gas reaches the surface.',
-                   math: 'P_atm < P_internal'
+                   title: 'Scuba Diving', 
+                   icon: '🤿', 
+                   color: 'text-blue-400', 
+                   desc: 'At the surface, you feel 1 atmosphere. Dive to 33ft, and the weight of the water above adds 1 more. Your eardrums feel this cumulative stack increasing equally from all sides, requiring you to equalize.',
+                   math: 'P_abs = P_atm + P_fluid'
                  },
                  { 
-                   title: 'Weather Balloon', 
-                   icon: '🎈', 
-                   color: 'text-blue-500', 
-                   desc: 'When a weather balloon is released, it is only partially filled. As it reaches higher altitudes where atmospheric pressure is lower, the gas inside expands until the balloon reaches its full diameter. Gas in the well does the same as it rises.',
-                   math: 'Volume ∝ 1 / Pressure'
-                 },
-                 { 
-                   title: 'Leaky Balloon', 
-                   icon: '🌬️', 
+                   title: 'Aquarium Design', 
+                   icon: '🐠', 
                    color: 'text-emerald-400', 
-                   desc: 'Imagine trying to hold a balloon underwater. It takes very little effort at the bottom. But as you move it up, it grows larger and harder to control, eventually bursting or shooting out of the water if released.',
-                   math: 'Buoyancy = f(Volume)'
+                   desc: 'Glass thickness for a 100-gallon aquarium is determined by the *water level* height, not the total volume. A tall, narrow tank needs thicker glass at the base than a long, shallow one due to the head pressure.',
+                   math: 'Stress ∝ Vertical Head'
+                 },
+                 { 
+                   title: 'F1 Car Hydraulics', 
+                   icon: '🏎️', 
+                   color: 'text-red-500', 
+                   desc: 'Brake fluid in F1 lines uses the principle that pressure is transmitted instantly and equally. While the system is pressurized by a piston, the fluid behaves like a column of intense energy seeking any path out.',
+                   math: 'Force = Pressure × Area'
+                 },
+                 { 
+                   title: 'Residential Plumbing', 
+                   icon: '🚰', 
+                   color: 'text-cyan-400', 
+                   desc: 'In skyscrapers, ground floor pipes handle immense "Static Head" compared to the penthouse. Opening a faucet releases this energy into flow; if the pipe walls can\'t handle the stress, they burst.',
+                   math: 'ΔP = SG × 0.433 × ΔH'
                  }
                ].map((a) => (
-                 <div key={a.title} className="bg-slate-950 p-8 rounded-[2.5rem] border border-slate-800 shadow-inner group hover:border-amber-500 transition-all flex flex-col text-center items-center">
-                    <div className="text-5xl mb-6 transform group-hover:scale-110 transition-transform">{a.icon}</div>
-                    <span className={`text-[11px] font-black uppercase tracking-widest ${a.color} mb-4`}>{a.title}</span>
-                    <p className="text-[11px] text-slate-500 leading-relaxed italic font-medium group-hover:text-slate-300 mb-6">
+                 <div key={a.title} className="bg-slate-950 p-8 rounded-[3rem] border border-slate-800 shadow-2xl group hover:border-amber-500/50 transition-all flex flex-col text-center items-center relative overflow-hidden">
+                    <div className="text-6xl mb-8 transform group-hover:scale-110 transition-transform duration-500">{a.icon}</div>
+                    <span className={`text-[10px] font-black uppercase tracking-widest ${a.color} mb-4`}>{a.title}</span>
+                    <p className="text-[11px] text-slate-500 leading-relaxed italic font-medium group-hover:text-slate-200 mb-8 flex-1">
                       {a.desc}
                     </p>
                     <div className="mt-auto bg-slate-900 px-4 py-2 rounded-xl border border-white/5">
-                      <code className="text-[10px] font-mono text-amber-500 font-bold">{a.math}</code>
+                      <code className="text-[9px] font-mono text-amber-500 font-bold">{a.math}</code>
                     </div>
                  </div>
                ))}
@@ -615,94 +302,82 @@ const GasMigrationVisualizer: React.FC = () => {
   );
 };
 
-const DirectionalDrillingVisualizer: React.FC = () => {
-  const [buildRate, setBuildRate] = useState(3); 
-  const [turnRate, setTurnRate] = useState(0); 
-  const [targetInclination, setTargetInclination] = useState(45);
+const HoleCleaningVisualizer: React.FC = () => {
+  const [flowRate, setFlowRate] = useState(450);
+  const [viscosity, setViscosity] = useState(35);
+  const [inclination, setInclination] = useState(0);
+  const [particleSize, setParticleSize] = useState(5);
   const [viewMode, setViewMode] = useState<'Simulation' | 'Theory' | 'Analogies'>('Simulation');
 
-  const segments = 20;
-  const generatePath = () => {
-    let points = [{ x: 50, y: 0, z: 0, inc: 0, azm: 0 }];
-    for (let i = 1; i <= segments; i++) {
-      const prev = points[i - 1];
-      const inc = Math.min(targetInclination, prev.inc + (buildRate * 0.5));
-      const azm = prev.azm + (turnRate * 0.5);
-      
-      const dz = Math.cos(inc * Math.PI / 180);
-      const dy = Math.sin(inc * Math.PI / 180) * Math.cos(azm * Math.PI / 180);
-      const dx = Math.sin(inc * Math.PI / 180) * Math.sin(azm * Math.PI / 180);
-
-      points.push({
-        x: prev.x + dx * 20,
-        y: prev.y + dy * 20,
-        z: prev.z + dz * 20,
-        inc,
-        azm
-      });
-    }
-    return points;
-  };
-
-  const path = generatePath();
+  const ANNULAR_AREA = 35.5; 
+  const annularVelocity = (flowRate * 24.5) / ANNULAR_AREA;
+  
+  const slipVelocity = (Math.pow(particleSize, 1.5) * 25) / (viscosity / 2); 
+  
+  const angleRad = (inclination * Math.PI) / 180;
+  const verticalSlip = slipVelocity * Math.cos(angleRad);
+  const inclinationEffect = Math.sin(angleRad) * 40;
+  
+  const netVelocity = annularVelocity - verticalSlip - (inclination > 45 ? inclinationEffect : 0);
+  const transportEfficiency = Math.max(0, Math.min(1, netVelocity / (annularVelocity || 1)));
+  
+  const isStuck = transportEfficiency < 0.2 || (inclination > 60 && flowRate < 450) || (viscosity < 25 && particleSize > 8);
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-[3.5rem] p-10 mt-6 flex flex-col lg:flex-row items-stretch gap-12 animate-in zoom-in duration-700 shadow-2xl overflow-hidden relative">
-      <div className="absolute top-0 left-0 p-12 opacity-[0.03] pointer-events-none select-none text-white">
-        <span className="text-[14rem] font-black italic uppercase tracking-tighter leading-none">MWD/RSS</span>
+      <div className="absolute top-0 left-0 p-12 opacity-[0.03] pointer-events-none select-none text-white z-0">
+        <span className="text-[14rem] font-black italic uppercase tracking-tighter leading-none">Vnet = Va - Vs</span>
       </div>
 
-      <div className="flex flex-col gap-6 flex-shrink-0">
-        <div className="relative w-80 h-[45rem] bg-slate-950 border-4 border-slate-800 rounded-[3.5rem] overflow-hidden shadow-inner flex flex-col">
-          <div className="flex-1 border-b border-slate-800 relative p-4 overflow-hidden">
-            <span className="absolute top-2 left-2 text-[8px] font-black text-slate-600 uppercase tracking-widest">Profile View (Z vs Y)</span>
-            <svg className="w-full h-full overflow-visible" viewBox="0 0 100 400">
-               <path 
-                 d={`M 50 0 ${path.map(p => `L ${50 + p.y} ${p.z}`).join(' ')}`}
-                 fill="none" 
-                 stroke="#0ea5e9" 
-                 strokeWidth="10" 
-                 strokeLinecap="round"
-                 className="transition-all duration-500"
-               />
-               <circle cx="50" cy="0" r="4" fill="#0ea5e9" />
-               <circle cx={50 + path[path.length - 1].y} cy={path[path.length - 1].z} r="6" fill="#f59e0b" className="animate-pulse" />
-            </svg>
-          </div>
-          
-          <div className="h-48 relative p-4 bg-slate-950/50 overflow-hidden">
-            <span className="absolute top-2 left-2 text-[8px] font-black text-slate-600 uppercase tracking-widest">Plan View (X vs Y)</span>
-            <svg className="w-full h-full overflow-visible" viewBox="0 0 100 100">
-               <path 
-                 d={`M 50 50 ${path.map(p => `L ${50 + p.x - 50} ${50 + p.y}`).join(' ')}`}
-                 fill="none" 
-                 stroke="#f59e0b" 
-                 strokeWidth="4" 
-                 strokeDasharray="4 2"
-                 strokeLinecap="round"
-               />
-               <circle cx="50" cy="50" r="3" fill="#f59e0b" />
-            </svg>
-          </div>
-        </div>
-        
-        <div className="bg-slate-950 border border-slate-800 p-6 rounded-3xl space-y-4 shadow-inner">
-           <div className="flex justify-between items-center">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Final Depth</span>
-              <span className="text-xl font-black text-white italic font-mono">4,200 <span className="text-[10px] opacity-40">ft MD</span></span>
+      <div className="flex flex-col gap-4 flex-shrink-0 z-10">
+        <div className="relative w-80 h-[50rem] bg-slate-950 border-4 border-slate-800 rounded-[3rem] overflow-hidden shadow-inner flex flex-col items-center">
+           <div className="flex-1 w-32 border-x-8 border-slate-700 bg-slate-900/40 relative overflow-hidden transition-transform duration-1000 ease-in-out origin-top" style={{ transform: `rotate(${inclination}deg)` }}>
+              <div className="absolute left-1/2 -translate-x-1/2 top-0 bottom-0 w-12 bg-slate-800 border-x-4 border-slate-700 opacity-60"></div>
+              <div className="absolute inset-0 bg-blue-500/5 animate-pulse"></div>
+
+              {!isStuck ? (
+                Array.from({ length: Math.floor(transportEfficiency * 30 + 5) }).map((_, i) => (
+                  <div 
+                    key={i} 
+                    className="absolute bg-amber-600 rounded-sm shadow-[0_0_8px_rgba(217,119,6,0.4)]" 
+                    style={{ 
+                      width: `${particleSize}px`, 
+                      height: `${particleSize}px`, 
+                      left: `${Math.random() * 60 + 20}%`, 
+                      bottom: '-10%', 
+                      animation: `cuttingsRise ${8 / (transportEfficiency + 0.1)}s linear infinite`, 
+                      animationDelay: `${Math.random() * 5}s`,
+                      opacity: 0.8 + Math.random() * 0.2
+                    }}
+                  ></div>
+                ))
+              ) : (
+                <div className="absolute bottom-0 inset-x-0 h-64 bg-gradient-to-t from-amber-900/90 to-transparent flex flex-col items-center justify-end pb-8">
+                   <div className="w-full h-full bg-[url('https://www.transparenttextures.com/patterns/sandpaper.png')] opacity-30"></div>
+                   <span className="text-[12px] font-black text-red-500 uppercase animate-pulse mb-2">Dune Formation</span>
+                   <span className="text-[8px] font-black text-red-400 uppercase tracking-widest italic">Critical Saltation Velocity</span>
+                </div>
+              )}
+
+              <div className="absolute top-10 right-4 flex flex-col items-center gap-2">
+                 <div className="w-1 bg-blue-400 rounded-full transition-all duration-500" style={{ height: `${annularVelocity / 5}px` }}></div>
+                 <span className="text-[6px] font-black text-blue-400 uppercase rotate-90">Va</span>
+              </div>
            </div>
-           <div className="flex justify-between items-center">
-              <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic">Departure</span>
-              <span className="text-xl font-black text-amber-500 italic font-mono">1,450 <span className="text-[10px] opacity-40">ft VS</span></span>
+        </div>
+        <div className="bg-slate-950 p-6 rounded-3xl border border-slate-800 text-center">
+           <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest mb-1 block italic">Transport Efficiency</span>
+           <div className={`text-4xl font-black italic font-mono transition-colors duration-500 ${transportEfficiency < 0.3 ? 'text-red-500' : transportEfficiency < 0.7 ? 'text-amber-500' : 'text-emerald-500'}`}>
+             {Math.round(transportEfficiency * 100)}%
            </div>
         </div>
       </div>
 
-      <div className="flex-1 flex flex-col space-y-8 overflow-hidden">
-        <div className="flex bg-slate-950 p-2 rounded-2xl border border-slate-800 gap-2 shadow-inner">
+      <div className="flex-1 space-y-8 z-10 flex flex-col">
+        <div className="flex bg-slate-950 p-2 rounded-3xl border border-slate-800 gap-2">
            {['Simulation', 'Theory', 'Analogies'].map((mode) => (
              <button key={mode} onClick={() => setViewMode(mode as any)}
-               className={`flex-1 py-4 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode ? 'bg-amber-500 text-slate-950 shadow-lg' : 'text-slate-500 hover:text-slate-300'}`}>
+               className={`flex-1 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode ? 'bg-amber-500 text-slate-950 shadow-xl scale-105' : 'text-slate-500 hover:text-slate-300'}`}>
                {mode}
              </button>
            ))}
@@ -711,137 +386,341 @@ const DirectionalDrillingVisualizer: React.FC = () => {
         <div className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
           {viewMode === 'Simulation' && (
             <div className="space-y-8 animate-in fade-in duration-500">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                 <div className="bg-slate-950 p-8 rounded-[2.5rem] border border-slate-800 space-y-6">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block italic">1. Vertical Steering (Build)</label>
-                    <div className="space-y-4">
-                       <div className="flex justify-between items-center">
-                          <span className="text-[9px] font-black text-white uppercase">Build Rate</span>
-                          <span className="text-xs font-mono font-bold text-blue-400">{buildRate}°/100ft</span>
-                       </div>
-                       <input type="range" min="0" max="10" step="0.5" value={buildRate} onChange={(e) => setBuildRate(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer" />
-                       
-                       <div className="flex justify-between items-center pt-2">
-                          <span className="text-[9px] font-black text-white uppercase">Target Inclination</span>
-                          <span className="text-xs font-mono font-bold text-emerald-400">{targetInclination}°</span>
-                       </div>
-                       <input type="range" min="0" max="90" value={targetInclination} onChange={(e) => setTargetInclination(Number(e.target.value))} className="w-full accent-emerald-500 h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer" />
-                    </div>
-                 </div>
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="bg-slate-950 p-8 rounded-[2.5rem] border border-slate-800 space-y-6 shadow-inner relative group">
+                     <div className="absolute top-4 right-6 text-2xl opacity-10">🌊</div>
+                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic block">1. Flow Rate (GPM)</label>
+                     <input type="range" min="0" max="1200" step="50" value={flowRate} onChange={(e) => setFlowRate(Number(e.target.value))} className="w-full accent-blue-500 h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer" />
+                     <div className="flex justify-between text-xs font-mono font-bold"><span className="text-slate-500">Value:</span><span className="text-blue-400">{flowRate} GPM</span></div>
+                  </div>
+                  
+                  <div className="bg-slate-950 p-8 rounded-[2.5rem] border border-slate-800 space-y-6 shadow-inner relative group">
+                     <div className="absolute top-4 right-6 text-2xl opacity-10">🍯</div>
+                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic block">2. Viscosity (cP)</label>
+                     <input type="range" min="10" max="100" step="5" value={viscosity} onChange={(e) => setViscosity(Number(e.target.value))} className="w-full accent-amber-500 h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer" />
+                     <div className="flex justify-between text-xs font-mono font-bold"><span className="text-slate-500">Rheology:</span><span className="text-amber-500">{viscosity} cP</span></div>
+                  </div>
 
-                 <div className="bg-slate-950 p-8 rounded-[2.5rem] border border-slate-800 space-y-6">
-                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest block italic">2. Horizontal Steering (Turn)</label>
-                    <div className="space-y-4">
-                       <div className="flex justify-between items-center">
-                          <span className="text-[9px] font-black text-white uppercase">Turn Rate (DLS)</span>
-                          <span className="text-xs font-mono font-bold text-amber-500">{turnRate}°/100ft</span>
-                       </div>
-                       <input type="range" min="-5" max="5" step="0.5" value={turnRate} onChange={(e) => setTurnRate(Number(e.target.value))} className="w-full accent-amber-500 h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer" />
-                       <div className="flex justify-between text-[8px] font-black text-slate-600 uppercase tracking-widest">
-                          <span>Left Turn</span>
-                          <span>Neutral</span>
-                          <span>Right Turn</span>
-                       </div>
-                    </div>
-                 </div>
-              </div>
+                  <div className="bg-slate-950 p-8 rounded-[2.5rem] border border-slate-800 space-y-6 shadow-inner relative group">
+                     <div className="absolute top-4 right-6 text-2xl opacity-10">📐</div>
+                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic block">3. Well Inclination (°)</label>
+                     <input type="range" min="0" max="90" value={inclination} onChange={(e) => setInclination(Number(e.target.value))} className="w-full accent-emerald-500 h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer" />
+                     <div className="flex justify-between text-xs font-mono font-bold"><span className="text-slate-500">Angle:</span><span className="text-emerald-500">{inclination}°</span></div>
+                  </div>
 
-              <div className="bg-slate-950 p-10 rounded-[3.5rem] border border-slate-800 shadow-2xl relative overflow-hidden group">
-                 <div className="absolute top-0 left-0 w-2 h-full bg-blue-500 shadow-[0_0_15px_rgba(14,165,233,0.5)]"></div>
-                 <div className="flex flex-col md:flex-row items-center gap-10">
-                    <div className="p-6 bg-slate-900 rounded-3xl border border-slate-800 flex flex-col items-center">
-                       <span className="text-[8px] font-black text-slate-500 uppercase tracking-widest mb-2">RSS Steering Head</span>
-                       <div className="w-16 h-16 bg-gradient-to-br from-slate-700 to-slate-900 rounded-full border-4 border-slate-800 flex items-center justify-center relative overflow-hidden">
-                          <div className="w-1 h-8 bg-amber-500 rounded-full transition-transform duration-500 origin-bottom" style={{ transform: `rotate(${-turnRate * 15}deg)` }}></div>
-                       </div>
-                    </div>
-                    <div className="flex-1 space-y-2">
-                       <h4 className="text-[10px] font-black text-blue-500 uppercase tracking-[0.4em]">Integrated Navigation Suite</h4>
-                       <p className="text-xl font-black text-white italic tracking-tighter leading-tight">
-                         The <span className="text-amber-500">RSS (Rotary Steerable System)</span> provides continuous steering control, while the <span className="text-blue-500">MWD (Measurement While Drilling)</span> tool sends live trajectory data via mud-pulse telemetry back to surface.
-                       </p>
-                    </div>
-                 </div>
-              </div>
+                  <div className="bg-slate-950 p-8 rounded-[2.5rem] border border-slate-800 space-y-6 shadow-inner relative group">
+                     <div className="absolute top-4 right-6 text-2xl opacity-10">🪨</div>
+                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest italic block">4. Cutting Size (mm)</label>
+                     <input type="range" min="1" max="15" step="1" value={particleSize} onChange={(e) => setParticleSize(Number(e.target.value))} className="w-full accent-slate-400 h-1.5 bg-slate-800 rounded-full appearance-none cursor-pointer" />
+                     <div className="flex justify-between text-xs font-mono font-bold"><span className="text-slate-500">Diameter:</span><span className="text-slate-400">{particleSize} mm</span></div>
+                  </div>
+               </div>
+
+               <div className="bg-slate-950 p-12 rounded-[4rem] border border-slate-800 shadow-2xl relative overflow-hidden group">
+                  <div className="absolute inset-0 bg-grid-slate-100/[0.02] bg-[length:20px_20px]"></div>
+                  <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-12">
+                     <div className="text-left space-y-4">
+                        <span className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mb-2 block">Mechanical Analysis</span>
+                        <p className="text-xl font-bold text-white italic leading-tight">
+                           {isStuck ? "Critical Risk: Cuttings are accumulating in the wellbore faster than they are being removed." : "Optimal Transport: Fluid energy successfully overcomes particle slip velocity."}
+                        </p>
+                        <div className="flex gap-4">
+                           <div className="bg-blue-500/10 border border-blue-500/20 px-4 py-2 rounded-xl">
+                              <span className="text-[8px] font-black text-blue-400 uppercase block">Annular Velocity</span>
+                              <span className="text-sm font-black text-white">{Math.round(annularVelocity)} ft/min</span>
+                           </div>
+                           <div className="bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-xl">
+                              <span className="text-[8px] font-black text-red-400 uppercase block">Slip Velocity</span>
+                              <span className="text-sm font-black text-white">{Math.round(slipVelocity)} ft/min</span>
+                           </div>
+                        </div>
+                     </div>
+                     <div className="w-48 h-48 bg-slate-900 rounded-full border-8 border-slate-800 flex items-center justify-center relative shadow-inner shrink-0">
+                        <div className="absolute inset-0 flex items-center justify-center overflow-hidden rounded-full">
+                           <div className="w-full h-full bg-blue-500/10 animate-pulse"></div>
+                        </div>
+                        <span className={`text-5xl font-black italic tracking-tighter transition-colors duration-500 ${isStuck ? 'text-red-500' : 'text-emerald-500'}`}>
+                           {Math.round(transportEfficiency * 100)}%
+                        </span>
+                     </div>
+                  </div>
+               </div>
             </div>
           )}
 
           {viewMode === 'Theory' && (
-            <div className="space-y-10 animate-in slide-in-from-right-10 duration-500">
-               <div className="bg-slate-950 p-20 rounded-[4rem] border border-slate-800 text-center relative overflow-hidden group shadow-inner">
-                 <div className="absolute inset-0 bg-gradient-to-b from-amber-500/5 to-transparent"></div>
-                 <h5 className="text-[11px] font-black text-amber-500 uppercase tracking-[0.5em] mb-12">Geometry of Deviation</h5>
-                 <div className="flex justify-center items-center gap-12">
-                    <div className="flex flex-col items-center">
-                       <h4 className="text-6xl font-black text-white italic tracking-tighter leading-none mb-4">Inc</h4>
-                       <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Inclination (Vertical Tilt)</span>
-                    </div>
-                    <span className="text-4xl font-black text-slate-800">+</span>
-                    <div className="flex flex-col items-center">
-                       <h4 className="text-6xl font-black text-white italic tracking-tighter leading-none mb-4">Azm</h4>
-                       <span className="text-[8px] font-black uppercase tracking-widest text-slate-500">Azimuth (Compass Direction)</span>
-                    </div>
-                 </div>
-                 <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.4em] mt-12">DLS = f(ΔInc, ΔAzm) — Dogleg Severity / Curvature</p>
-               </div>
-
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="bg-blue-500 p-12 rounded-[3.5rem] text-slate-950 relative overflow-hidden shadow-xl">
-                    <h4 className="text-[11px] font-black uppercase tracking-[0.4em] mb-8 opacity-60">The MWD Component</h4>
-                    <p className="text-2xl font-black italic tracking-tight leading-tight">
-                      "Measurement While Drilling acts as the wellbore's <span className="underline">Sensory Nervous System</span>. It uses magnetometers and accelerometers to determine exactly where the bit is in 3D space, relative to the target reservoir."
-                    </p>
+            <div className="space-y-10 animate-in slide-in-from-right-10 duration-700">
+               <div className="bg-slate-950 p-20 rounded-[4rem] border border-slate-800 text-center relative overflow-hidden shadow-inner group">
+                  <h5 className="text-[12px] font-black text-blue-500 uppercase tracking-[0.6em] mb-16 italic">The Dynamic Balance</h5>
+                  <h4 className="text-[14rem] font-black text-white italic tracking-tighter leading-none opacity-10 absolute inset-0 flex items-center justify-center pointer-events-none">Vnet</h4>
+                  <div className="relative z-10 flex flex-col items-center gap-4">
+                     <span className="text-6xl font-black text-white tracking-tighter italic">Vnet = Va - Vs</span>
+                     <p className="text-slate-500 text-[10px] font-black uppercase tracking-widest max-w-xs">
+                        Net Velocity equals Annular Velocity minus Slip Velocity.
+                     </p>
                   </div>
-                  <div className="bg-slate-900 border border-slate-800 p-12 rounded-[3.5rem] relative overflow-hidden shadow-xl">
-                    <h4 className="text-[11px] font-black text-amber-500 uppercase tracking-[0.5em] mb-8">Rotary Steerable (RSS)</h4>
-                    <p className="text-slate-300 text-sm leading-relaxed font-medium italic">
-                      Unlike traditional "sliding" with a mud motor (which is slow and increases risk of sticking), RSS allows the entire drill string to <span className="text-white font-bold italic">rotate constantly</span> while internal pads or an internal mandrel orient the bit towards the target.
-                    </p>
+               </div>
+               
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="bg-slate-900 border border-slate-800 p-10 rounded-[3rem] shadow-xl space-y-4">
+                     <h4 className="text-[11px] font-black text-amber-500 uppercase tracking-widest italic">The Boycott Effect</h4>
+                     <p className="text-slate-400 text-sm leading-relaxed font-medium italic">
+                        In inclined wellbores, gravity causes cuttings to settle on the low side of the hole over a much shorter distance than in vertical wells. Once they settle, they form "dunes" or beds which are much harder to lift than suspended particles.
+                     </p>
+                  </div>
+                  <div className="bg-slate-900 border border-slate-800 p-10 rounded-[3rem] shadow-xl space-y-4">
+                     <h4 className="text-[11px] font-black text-blue-400 uppercase tracking-widest italic">Fluid Rheology (YP/PV)</h4>
+                     <p className="text-slate-400 text-sm leading-relaxed font-medium italic">
+                        Yield Point (YP) represents the fluid's ability to "carry" solids. High YP helps keep cuttings in suspension when circulation stops, while Plastic Viscosity (PV) relates more to the friction of the fluid moving.
+                     </p>
                   </div>
                </div>
             </div>
           )}
 
           {viewMode === 'Analogies' && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-in slide-in-from-bottom-10 duration-500">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-bottom-10 duration-700">
                {[
                  { 
-                   title: 'GPS Navigation', 
-                   icon: '🛰️', 
+                   title: 'The Vacuum Cleaner', 
+                   icon: '🧹', 
                    color: 'text-blue-400', 
-                   desc: 'MWD is the GPS on your dashboard. It doesn\'t steer the car, but it tells you exactly where you are and how many miles you are away from your destination. Without it, you are "driving blind" in a 30,000ft hole.',
-                   math: 'Telemetry: Data ➔ Pulse ➔ Surf'
+                   desc: 'To suck up heavy debris, you need high "suction" (Flow Rate). If you try to vacuum a pebble with a low-power setting, it just rattles in the tube—that\'s a particle with high slip velocity.' 
                  },
                  { 
-                   title: 'Adaptive Cruise Control', 
-                   icon: '🏎️', 
-                   color: 'text-red-500', 
-                   desc: 'Rotary Steerable is like modern Lane-Keep Assist or Autonomous Steering. It maintains the vehicle\'s rotation (drilling) while automatically making micro-adjustments to stay on the designated path.',
-                   math: 'Active Path Correction'
+                   title: 'Leaf Blower in a Tunnel', 
+                   icon: '🍂', 
+                   color: 'text-amber-500', 
+                   desc: 'Imagine blowing leaves up a hill. If the hill is too steep (Inclination), the leaves roll back down even with a strong breeze. You have to maintain high wind speed (Va) to keep them moving forward.' 
                  },
                  { 
-                   title: 'Flight Path Profile', 
-                   icon: '✈️', 
+                   title: 'River Siltation', 
+                   icon: '🌊', 
                    color: 'text-emerald-400', 
-                   desc: 'Inclination is like the "Pitch" of an airplane during takeoff (Building angle), and Azimuth is the "Heading". Directional drillers manage these two vectors to glide the well into a thin reservoir target.',
-                   math: 'Vectoring ➔ 3D Targeting'
+                   desc: 'A fast-moving mountain stream carries boulders. A slow-moving river only carries fine sand. When the river slows down (Pumps off), the boulders drop to the bottom first.' 
+                 },
+                 { 
+                   title: 'The Honey Pour', 
+                   icon: '🍯', 
+                   color: 'text-red-400', 
+                   desc: 'Drop a marble in water vs honey. In water, it falls instantly (Low Viscosity/High Slip). In honey, it descends slowly (High Viscosity/Low Slip). We engineer mud to be "honey-like" to carry cuttings.' 
                  }
                ].map((a) => (
-                 <div key={a.title} className="bg-slate-950 p-8 rounded-[2.5rem] border border-slate-800 shadow-inner group hover:border-amber-500 transition-all flex flex-col text-center items-center">
-                    <div className="text-5xl mb-6 transform group-hover:scale-110 transition-transform">{a.icon}</div>
-                    <span className={`text-[11px] font-black uppercase tracking-widest ${a.color} mb-4`}>{a.title}</span>
-                    <p className="text-[11px] text-slate-500 leading-relaxed italic font-medium group-hover:text-slate-300 mb-6">
-                      {a.desc}
+                 <div key={a.title} className="bg-slate-950 p-10 rounded-[3.5rem] border border-slate-800 shadow-2xl group hover:border-amber-500 transition-all flex flex-col items-center text-center relative overflow-hidden">
+                    <div className="text-7xl mb-10 group-hover:scale-125 transition-transform duration-500">{a.icon}</div>
+                    <span className={`text-[12px] font-black uppercase tracking-widest ${a.color} mb-6 block`}>{a.title}</span>
+                    <p className="text-sm text-slate-500 leading-relaxed italic font-medium group-hover:text-slate-200">
+                       {a.desc}
                     </p>
-                    <div className="mt-auto bg-slate-900 px-4 py-2 rounded-xl border border-white/5">
-                      <code className="text-[10px] font-mono text-amber-500 font-bold">{a.math}</code>
-                    </div>
                  </div>
                ))}
             </div>
           )}
         </div>
       </div>
+      <style>{`
+        @keyframes cuttingsRise { 
+          from { transform: translateY(0); opacity: 0; } 
+          10% { opacity: 1; } 
+          90% { opacity: 1; } 
+          100% { transform: translateY(-800px); opacity: 0; } 
+        }
+      `}</style>
+    </div>
+  );
+};
+
+const DirectionalDrillingVisualizer: React.FC = () => {
+  const [buildRate, setBuildRate] = useState(3.0); 
+  const [turnRate, setTurnRate] = useState(0.0); 
+  const [segments, setSegments] = useState(25);
+  const [viewMode, setViewMode] = useState<'Steering' | 'BHA Tools' | 'Theory' | 'Analogies'>('Steering');
+
+  const generatePath = () => {
+    let points = [{ x: 50, y: 0, z: 0, inc: 0, azm: 0 }];
+    const segmentMD = 50; 
+    for (let i = 1; i <= segments; i++) {
+      const prev = points[i - 1];
+      const dInc = buildRate * (segmentMD / 100);
+      const dAzm = turnRate * (segmentMD / 100);
+      const newInc = prev.inc + dInc;
+      const newAzm = prev.azm + dAzm;
+      const avgInc = ((prev.inc + newInc) / 2) * (Math.PI / 180);
+      const avgAzm = ((prev.azm + newAzm) / 2) * (Math.PI / 180);
+      const visualScale = 15; 
+      points.push({
+        x: prev.x + (Math.sin(avgInc) * Math.sin(avgAzm)) * visualScale,
+        y: prev.y + (Math.sin(avgInc) * Math.cos(avgAzm)) * visualScale,
+        z: prev.z + (Math.cos(avgInc)) * visualScale,
+        inc: newInc,
+        azm: newAzm
+      });
+    }
+    return points;
+  };
+
+  const path = generatePath();
+  const lastPoint = path[path.length - 1];
+  const dls = Math.sqrt(Math.pow(buildRate, 2) + Math.pow(turnRate * Math.sin(lastPoint.inc * Math.PI / 180), 2)).toFixed(2);
+  const isHighDLS = parseFloat(dls) > 6.0;
+
+  return (
+    <div className="bg-slate-900 border border-slate-800 rounded-[3.5rem] p-10 mt-6 flex flex-col lg:flex-row items-stretch gap-12 animate-in zoom-in duration-700 shadow-2xl overflow-hidden relative">
+      <div className="absolute top-0 left-0 p-12 opacity-[0.03] pointer-events-none select-none text-white z-0">
+        <span className="text-[14rem] font-black italic uppercase tracking-tighter leading-none">TRAJECTORY</span>
+      </div>
+
+      <div className="flex flex-col gap-6 flex-shrink-0 z-10 w-full lg:w-[400px]">
+        <div className="relative h-[35rem] bg-slate-950 border-4 border-slate-800 rounded-[3rem] overflow-hidden shadow-inner flex flex-col">
+          <div className="flex-1 relative border-b border-slate-800 p-6 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-blue-500/5 to-transparent">
+            <span className="absolute top-4 left-6 text-[8px] font-black text-slate-500 uppercase tracking-[0.3em]">Profile View (Z vs Y)</span>
+            <svg className="w-full h-full" viewBox="0 0 200 450">
+               <path d={`M 100 0 ${path.map(p => `L ${100 + p.y} ${p.z}`).join(' ')}`} fill="none" stroke="#0ea5e9" strokeWidth="12" strokeLinecap="round" className="transition-all duration-700" />
+               <circle cx={100 + lastPoint.y} cy={lastPoint.z} r="10" fill="#f59e0b" className="animate-pulse shadow-lg" />
+               <ellipse cx="150" cy="420" rx="40" ry="15" fill="none" stroke="#22c55e" strokeWidth="2" strokeDasharray="4 4" opacity="0.4" />
+               <text x="150" y="445" textAnchor="middle" className="fill-green-500 text-[10px] font-black uppercase">Target Reservoir</text>
+            </svg>
+          </div>
+          <div className="h-44 relative p-6 bg-slate-950/80">
+            <span className="absolute top-4 left-6 text-[8px] font-black text-slate-500 uppercase tracking-[0.3em]">Plan View (X vs Y)</span>
+            <svg className="w-full h-full" viewBox="0 0 100 100">
+               <path d={`M 50 50 ${path.map(p => `L ${50 + p.x - 50} ${50 + p.y}`).join(' ')}`} fill="none" stroke="#f59e0b" strokeWidth="4" strokeLinecap="round" strokeDasharray="4 2" />
+               <circle cx="50" cy="50" r="4" fill="#0ea5e9" />
+               <circle cx={50 + lastPoint.x - 50} cy={50 + lastPoint.y} r="5" fill="#f59e0b" />
+            </svg>
+          </div>
+        </div>
+
+        <div className="bg-slate-950 p-8 rounded-3xl border border-slate-800 space-y-6 shadow-2xl">
+           <div className="flex justify-between items-center">
+              <div className="flex flex-col">
+                <span className="text-[9px] font-black text-slate-500 uppercase tracking-widest italic">Dogleg Severity (DLS)</span>
+                <span className="text-[8px] text-slate-600 uppercase">Tortuosity Index</span>
+              </div>
+              <span className={`text-3xl font-black font-mono tracking-tighter ${isHighDLS ? 'text-red-500 animate-pulse' : 'text-emerald-500'}`}>{dls}° <span className="text-[10px]">/100ft</span></span>
+           </div>
+           <div className="h-2 w-full bg-slate-800 rounded-full overflow-hidden p-0.5">
+              <div className={`h-full transition-all duration-700 rounded-full shadow-lg ${isHighDLS ? 'bg-red-500' : 'bg-emerald-500'}`} style={{ width: `${Math.min(100, (parseFloat(dls) / 12) * 100)}%` }}></div>
+           </div>
+           <p className="text-[9px] text-slate-500 font-bold uppercase text-center italic">Limit DLS to avoid casing stress and tool failure</p>
+        </div>
+      </div>
+
+      <div className="flex-1 space-y-8 z-10">
+        <div className="flex bg-slate-950 p-2 rounded-3xl border border-slate-800 gap-2 shadow-2xl">
+           {['Steering', 'BHA Tools', 'Theory', 'Analogies'].map((mode) => (
+             <button key={mode} onClick={() => setViewMode(mode as any)}
+               className={`flex-1 py-5 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all ${viewMode === mode ? 'bg-amber-500 text-slate-950 shadow-xl scale-105' : 'text-slate-500 hover:text-slate-300'}`}>
+               {mode}
+             </button>
+           ))}
+        </div>
+
+        <div className="flex-1 overflow-y-auto max-h-[45rem] pr-2 custom-scrollbar">
+          {viewMode === 'Steering' && (
+            <div className="space-y-8 animate-in fade-in duration-700">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                  <div className="bg-slate-950 p-10 rounded-[3rem] border border-slate-800 space-y-8 shadow-inner relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 text-4xl opacity-[0.02] font-black italic">CONTROL</div>
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] block italic mb-6">Vertical Vector (Build/Drop)</label>
+                    <div className="space-y-8">
+                       <div className="flex justify-between items-center"><span className="text-[10px] font-black text-white uppercase">Inc Rate</span><span className="text-blue-400 font-mono font-bold">{buildRate}°/100ft</span></div>
+                       <input type="range" min="-12" max="12" step="0.5" value={buildRate} onChange={(e) => setBuildRate(Number(e.target.value))} className="w-full accent-blue-500 h-2 bg-slate-800 rounded-full appearance-none cursor-pointer" />
+                       <div className="flex justify-between text-[8px] font-black text-slate-600 uppercase tracking-widest"><span>Full Drop</span><span>Steady</span><span>Full Build</span></div>
+                    </div>
+                  </div>
+                  <div className="bg-slate-950 p-10 rounded-[3rem] border border-slate-800 space-y-8 shadow-inner relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 p-8 text-4xl opacity-[0.02] font-black italic">BEARING</div>
+                    <label className="text-[11px] font-black text-slate-400 uppercase tracking-[0.3em] block italic mb-6">Horizontal Vector (Turn/Walk)</label>
+                    <div className="space-y-8">
+                       <div className="flex justify-between items-center"><span className="text-[10px] font-black text-white uppercase">Azm Rate</span><span className="text-amber-500 font-mono font-bold">{turnRate}°/100ft</span></div>
+                       <input type="range" min="-8" max="8" step="0.5" value={turnRate} onChange={(e) => setTurnRate(Number(e.target.value))} className="w-full accent-amber-500 h-2 bg-slate-800 rounded-full appearance-none cursor-pointer" />
+                       <div className="flex justify-between text-[8px] font-black text-slate-600 uppercase tracking-widest"><span>Turn Left</span><span>Hold</span><span>Turn Right</span></div>
+                    </div>
+                  </div>
+               </div>
+
+               <div className="bg-blue-500/5 p-12 rounded-[4rem] border border-blue-500/20 flex flex-col md:flex-row items-center gap-12 group hover:border-blue-500/40 transition-colors">
+                  <div className="w-24 h-24 bg-blue-500 rounded-3xl flex items-center justify-center text-5xl shadow-[0_0_40px_rgba(59,130,246,0.3)] shrink-0 group-hover:rotate-12 transition-transform">🧭</div>
+                  <div className="space-y-4">
+                     <h5 className="text-blue-400 font-black text-xs uppercase tracking-[0.4em] italic">Measurement While Drilling (MWD)</h5>
+                     <p className="text-base text-slate-400 leading-relaxed font-medium">
+                        MWD acts as your <span className="text-white font-bold italic underline decoration-blue-500 underline-offset-4">Underwater GPS</span>. It uses magnetometers and accelerometers to send real-time coordinates through mud pulses. Without MWD, you are "flying blind" in 3D rock space.
+                     </p>
+                  </div>
+               </div>
+            </div>
+          )}
+
+          {viewMode === 'BHA Tools' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-right-10 duration-700">
+               <div className="bg-slate-950 p-12 rounded-[4rem] border border-slate-800 shadow-2xl flex flex-col items-center group">
+                  <div className="w-20 h-96 bg-slate-900 border-x-8 border-slate-700 relative flex flex-col items-center overflow-hidden rounded-full shadow-inner">
+                     <div className="h-32 w-full bg-blue-500/10 border-b-2 border-blue-500/30 flex items-center justify-center text-[10px] font-black text-blue-400 uppercase rotate-90">MWD Package</div>
+                     <div className="flex-1 w-full bg-amber-500/10 border-b-2 border-amber-500/30 flex items-center justify-center text-[10px] font-black text-amber-500 uppercase rotate-90">Rotary Steerable</div>
+                     <div className="h-20 w-full bg-slate-800 flex items-center justify-center">
+                        <div className="w-12 h-12 border-4 border-amber-500 rounded-full animate-spin-slow"></div>
+                     </div>
+                  </div>
+                  <h5 className="mt-10 text-[12px] font-black text-white uppercase italic tracking-[0.3em]">Advanced BHA Stack</h5>
+               </div>
+               <div className="space-y-6 flex flex-col justify-center">
+                  <div className="p-10 bg-slate-900/50 rounded-[3rem] border border-slate-800 shadow-xl group hover:border-blue-500/50 transition-all">
+                     <h6 className="text-[10px] font-black text-blue-400 uppercase mb-4 tracking-widest italic">The Navigator: MWD</h6>
+                     <p className="text-sm text-slate-400 leading-relaxed font-medium italic">Continuously transmits surveys (Inclination/Azimuth) to surface using mud-pulse telemetry. It tells the driller <span className="text-white font-bold">WHERE</span> the bit is.</p>
+                  </div>
+                  <div className="p-10 bg-slate-900/50 rounded-[3rem] border border-slate-800 shadow-xl group hover:border-amber-500/50 transition-all">
+                     <h6 className="text-[10px] font-black text-amber-400 uppercase mb-4 tracking-widest italic">The Pilot: RSS</h6>
+                     <p className="text-sm text-slate-400 leading-relaxed font-medium italic">Rotary Steerable Systems allow the bit to steer while the entire string is <span className="text-white font-bold italic">rotating</span>. Uses automated pads or internal mandrels to dictate <span className="text-white font-bold">HOW</span> to turn.</p>
+                  </div>
+               </div>
+            </div>
+          )}
+
+          {viewMode === 'Theory' && (
+            <div className="space-y-10 animate-in slide-in-from-left-10 duration-700">
+               <div className="bg-slate-950 p-24 rounded-[5rem] border border-slate-800 text-center relative overflow-hidden shadow-2xl">
+                  <h4 className="text-[14rem] font-black text-white italic tracking-tighter leading-none opacity-5 select-none absolute inset-0 flex items-center justify-center">AXIS</h4>
+                  <h5 className="text-[14px] font-black text-blue-500 uppercase tracking-[0.6em] mb-16 italic">The 3D Coordinate Engine</h5>
+                  <div className="flex justify-center gap-24 relative z-10">
+                     <div className="flex flex-col items-center"><span className="text-6xl font-black text-white italic tracking-tighter">Inc</span><span className="text-[9px] uppercase text-slate-500 tracking-[0.3em] mt-4">Vertical Tilt</span></div>
+                     <div className="flex flex-col items-center"><span className="text-6xl font-black text-white italic tracking-tighter">Azm</span><span className="text-[9px] uppercase text-slate-500 tracking-[0.3em] mt-4">Compass Bearing</span></div>
+                     <div className="flex flex-col items-center"><span className="text-6xl font-black text-amber-500 italic tracking-tighter">TVD</span><span className="text-[9px] uppercase text-slate-500 tracking-[0.3em] mt-4">Vertical Depth</span></div>
+                  </div>
+               </div>
+               <div className="bg-slate-900 border border-slate-800 p-16 rounded-[4rem] shadow-2xl relative group overflow-hidden">
+                  <div className="absolute top-0 right-0 p-10 text-4xl opacity-[0.03] font-black italic">GEOMETRY</div>
+                  <h4 className="text-[12px] font-black text-amber-500 uppercase tracking-[0.6em] mb-10 italic">Dogleg Intensity</h4>
+                  <p className="text-slate-300 text-xl leading-relaxed font-medium mb-8 italic">
+                     Steering is the art of <span className="text-white font-bold underline decoration-amber-500 underline-offset-8 decoration-4">Controlled Deviation</span>. You don't drill straight lines to the target; you follow an engineered arc (catenary curve) to minimize torque and drag.
+                  </p>
+               </div>
+            </div>
+          )}
+
+          {viewMode === 'Analogies' && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 animate-in slide-in-from-bottom-10 duration-700">
+               {[
+                 { title: 'Tesla Autopilot', icon: '🏎️', color: 'text-red-500', desc: 'Rotary Steerable (RSS) is your autonomous Lane-Keep Assist. It automatically maintains the bit\'s trajectory and adjusts for rock hardness while the whole vehicle (drill string) is spinning at top speed.' },
+                 { title: 'Flight Simulator', icon: '✈️', color: 'text-emerald-400', desc: 'Drilling is instrument-only flight. Inclination is your "Pitch" (Altitude gain) and Azimuth is your "Heading" (Bearing). You manage these two vectors to land the bit in a thin reservoir target.' },
+                 { title: 'Deep Sea Navigation', icon: '⛵', color: 'text-blue-400', desc: 'MWD surveys are like checking your position via GPS in the middle of the ocean. You periodically correct your course to account for "drift" (walk) and ensure you reach the port (target).' },
+                 { title: 'Joystick Gaming', icon: '🎮', color: 'text-amber-500', desc: 'Directional drilling is like playing a game with 10km of lag. Every steering command takes hours to physically manifest at the bit. You have to "feel" the rock and anticipate the curve.' }
+               ].map((a) => (
+                 <div key={a.title} className="bg-slate-950 p-10 rounded-[3rem] border border-slate-800 shadow-2xl group hover:border-amber-500 transition-all text-center relative overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-b from-white/[0.02] to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                    <div className="text-7xl mb-10 group-hover:scale-125 transition-transform duration-500 group-hover:rotate-6">{a.icon}</div>
+                    <span className={`text-[12px] font-black uppercase tracking-widest ${a.color} mb-6 block`}>{a.title}</span>
+                    <p className="text-[13px] text-slate-500 leading-relaxed italic font-medium group-hover:text-slate-200">{a.desc}</p>
+                 </div>
+               ))}
+            </div>
+          )}
+        </div>
+      </div>
+      <style>{`
+        .animate-spin-slow { animation: spin 4s linear infinite; }
+        @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+      `}</style>
     </div>
   );
 };
@@ -879,7 +758,6 @@ const ConceptBridge: React.FC = () => {
       {selectedConcept.id === 'hydrostatics' && <HydrostaticVisualizer />}
       {selectedConcept.id === 'hole_cleaning' && <HoleCleaningVisualizer />}
       {selectedConcept.id === 'directional' && <DirectionalDrillingVisualizer />}
-      {selectedConcept.id === 'gas_migration' && <GasMigrationVisualizer />}
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 mt-12">
         <div className="lg:col-span-4 space-y-3">
